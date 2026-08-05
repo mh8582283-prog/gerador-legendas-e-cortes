@@ -410,6 +410,17 @@ export default function EditorPage() {
       });
       router.push(`/render/${jobId}`);
     } catch {
+      // The user may click while the render is already active. In that case,
+      // take them to its progress page instead of leaving them in the editor.
+      try {
+        const activeJob = await getJob(jobId);
+        if (activeJob.stage === "rendering" || activeJob.stage === "generating_ass") {
+          router.push(`/render/${jobId}`);
+          return;
+        }
+      } catch {
+        // Keep the editor usable if the status check itself is unavailable.
+      }
       setRendering(false);
     }
   };

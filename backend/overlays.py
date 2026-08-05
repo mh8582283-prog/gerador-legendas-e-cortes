@@ -64,7 +64,9 @@ class ComposeExtras:
     progress_enabled: bool = False
     progress_color: str = "#E31B23"
     progress_height_pct: float = 0.04
-    progress_fast_until: float = 0.35
+    # The bar follows the video timeline: 70% filled at 70% of the video,
+    # then the remaining 30% is filled during the final 30%.
+    progress_fast_until: float = 0.70
     progress_fill_at_fast: float = 0.70
 
     @classmethod
@@ -108,7 +110,7 @@ class ComposeExtras:
             progress_enabled=bool(d.get("progress_enabled", False)),
             progress_color=str(d.get("progress_color") or "#E31B23"),
             progress_height_pct=float(d.get("progress_height_pct", 0.04)),
-            progress_fast_until=float(d.get("progress_fast_until", 0.35)),
+            progress_fast_until=float(d.get("progress_fast_until", 0.70)),
             progress_fill_at_fast=float(d.get("progress_fill_at_fast", 0.70)),
         )
 

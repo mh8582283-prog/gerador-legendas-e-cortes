@@ -25,7 +25,31 @@ export default function RenderPage() {
     getJob(jobId).then(setInitial).catch(() => {});
   }, [jobId]);
 
-  const current = job ?? initial;
+  // Keep polling while rendering as a safety net. Some local proxy/browser
+  // combinations keep the EventSource connection open but don't forward the
+  // later events, leaving the page visually stuck at 0%.
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      getJob(jobId).then((next) => {
+        if (active) setInitial(next);
+      }).catch(() => {});
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 1500);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [jobId]);
+
+  // Prefer the most recently updated state whether it came from the live
+  // stream or from the fallback poll.
+  const current = [job, initial].reduce<JobState | null>((latest, candidate) => {
+    if (!candidate) return latest;
+    if (!latest || (candidate.updated_at ?? 0) >= (latest.updated_at ?? 0)) return candidate;
+    return latest;
+  }, null);
   const done = current?.stage === "done";
   const error = current?.stage === "error";
   const hosted = isMultiTenant();
