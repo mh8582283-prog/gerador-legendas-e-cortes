@@ -64,10 +64,10 @@ class ComposeExtras:
     progress_enabled: bool = False
     progress_color: str = "#E31B23"
     progress_height_pct: float = 0.04
-    # The bar races to 70% during the first 30% of the video, then gradually
-    # covers its final 30% through the remaining playback.
-    progress_fast_until: float = 0.30
-    progress_fill_at_fast: float = 0.70
+    # Create the "almost finished" feeling: at half of the video the bar is
+    # already 80% full, then it advances slowly through its final 20%.
+    progress_fast_until: float = 0.50
+    progress_fill_at_fast: float = 0.80
 
     @classmethod
     def from_dict(cls, d: dict | None, job_dir: Path | None = None) -> ComposeExtras:
@@ -110,8 +110,8 @@ class ComposeExtras:
             progress_enabled=bool(d.get("progress_enabled", False)),
             progress_color=str(d.get("progress_color") or "#E31B23"),
             progress_height_pct=float(d.get("progress_height_pct", 0.04)),
-            progress_fast_until=float(d.get("progress_fast_until", 0.30)),
-            progress_fill_at_fast=float(d.get("progress_fill_at_fast", 0.70)),
+            progress_fast_until=float(d.get("progress_fast_until", 0.50)),
+            progress_fill_at_fast=float(d.get("progress_fill_at_fast", 0.80)),
         )
 
 

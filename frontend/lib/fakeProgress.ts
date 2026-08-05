@@ -9,10 +9,10 @@ export function fakeProgress(
   duration: number,
   opts: FakeProgressOpts = {},
 ): number {
-  // The bar reaches 70% at 30% of the video; the final 30% fills gradually
-  // through the rest of the playback, matching the exported result exactly.
-  const fastUntil = opts.fastUntil ?? 0.3;
-  const fillAt = opts.fillAt ?? 0.7;
+  // At 50% of the video the bar is already 80% filled; its final 20% then
+  // advances slowly, arriving exactly at the end of playback.
+  const fastUntil = opts.fastUntil ?? 0.5;
+  const fillAt = opts.fillAt ?? 0.8;
   if (duration <= 0) return 0;
   if (t >= duration) return 1;
   const ratio = Math.max(0, t / duration);
