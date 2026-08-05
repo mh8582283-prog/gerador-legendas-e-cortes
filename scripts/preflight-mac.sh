@@ -50,7 +50,8 @@ if [[ ! -x "$FFMPEG_BIN" ]]; then
   exit 1
 fi
 
-if ! "$FFMPEG_BIN" -hide_banner -filters 2>/dev/null | grep -q " ass "; then
+FFMPEG_FILTERS="$("$FFMPEG_BIN" -hide_banner -filters 2>/dev/null)"
+if ! grep -q " ass " <<< "$FFMPEG_FILTERS"; then
   echo "ERRO: ffmpeg-full sem filtro ass (libass). Rode: brew reinstall ffmpeg-full"
   exit 1
 fi

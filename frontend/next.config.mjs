@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000";
+const supabaseHostname = new URL(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lcbczyzedluaoxtuajoz.supabase.co"
+).hostname;
 
 const nextConfig = {
   output: "standalone",
@@ -7,7 +10,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "lcbczyzedluaoxtuajoz.supabase.co",
+        hostname: supabaseHostname,
         pathname: "/storage/v1/object/public/**",
       },
     ],
