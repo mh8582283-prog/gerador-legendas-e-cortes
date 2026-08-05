@@ -1247,6 +1247,11 @@ async def _run_render(job: Job, body: RenderRequest) -> None:
 async def download_output(job_id: str,
     user: Optional[UserContext] = Depends(mt_export_user_media)) -> FileResponse:
     job = resolve_job(job_id, user)
+    # FFmpeg creates output.mp4 before it has finished writing its index. Do
+    # not expose that partial file to the browser, otherwise a premature
+    # download can fail or produce an unusable video.
+    if job.stage != Stage.DONE:
+        raise HTTPException(409, "O vídeo ainda está sendo finalizado. Aguarde a conclusão do render.")
     if not job.output_path or not job.output_path.exists():
         raise HTTPException(404, "output not ready")
     return FileResponse(

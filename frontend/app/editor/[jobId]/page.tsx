@@ -349,6 +349,7 @@ export default function EditorPage() {
 
   const handleRender = async () => {
     if (!wordsData) return;
+    setError(null);
     if (selectedTemplate) {
       const tpl = templates.find(t => t.id === selectedTemplate);
       if (tpl?.needs_overlay && !overlayAsset) {
@@ -409,7 +410,7 @@ export default function EditorPage() {
         ig_caption_size: compose.ig_caption_size,
       });
       router.push(`/render/${jobId}`);
-    } catch {
+    } catch (e: unknown) {
       // The user may click while the render is already active. In that case,
       // take them to its progress page instead of leaving them in the editor.
       try {
@@ -422,6 +423,7 @@ export default function EditorPage() {
         // Keep the editor usable if the status check itself is unavailable.
       }
       setRendering(false);
+      setError(e instanceof Error ? e.message : "Não foi possível iniciar o render. Tente novamente.");
     }
   };
 
@@ -449,7 +451,14 @@ export default function EditorPage() {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-red-300">
-        {error}
+        <p>{error}</p>
+        <button
+          type="button"
+          onClick={() => setError(null)}
+          className="mt-4 rounded-lg border border-red-400/40 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-500/10"
+        >
+          Voltar ao editor
+        </button>
       </div>
     );
   }
