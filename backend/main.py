@@ -1073,7 +1073,6 @@ async def _run_transcribe(job: Job) -> None:
 
             await asyncio.to_thread(trim_only)
             job.update(Stage.TRANSCRIBED, 1.0, "Transcrição concluída")
-            asyncio.create_task(_apply_punctuation_background(job))
         except Exception as e:
             job.update(Stage.ERROR, 0.0, f"transcribe falhou: {e}")
 

@@ -179,6 +179,15 @@ def parse_progress(line: str, total_duration: float) -> float | None:
     """Parse an FFmpeg stderr line and return progress fraction in [0,1]."""
     if not line or total_duration <= 0:
         return None
+    # With ``-progress pipe:2`` FFmpeg emits newline-delimited key/value
+    # updates. Its usual status line ends in a carriage return, which means
+    # Python's line iterator only receives it after the render is finished.
+    if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
+        try:
+            micros = float(line.split("=", 1)[1].strip())
+            return max(0.0, min(1.0, micros / 1_000_000 / total_duration))
+        except ValueError:
+            return None
     if "time=" not in line:
         return None
     t = line.split("time=", 1)[1].split(" ", 1)[0].strip()

@@ -82,7 +82,9 @@ def _build_cmd(
 ) -> list[str]:
     use_complex = bool(extras and extras.progress_enabled)
 
-    cmd: list[str] = [ffmpeg_bin(), "-y", "-i", str(video)]
+    # Emit newline-delimited progress so the interface can update during long
+    # renders instead of waiting for FFmpeg's final carriage-return status.
+    cmd: list[str] = [ffmpeg_bin(), "-y", "-progress", "pipe:2", "-nostats", "-i", str(video)]
 
     if use_complex:
         vchain = _build_video_chain("0:v", "vout", ass, highlight_phrases, extras, duration, canvas_w, canvas_h)

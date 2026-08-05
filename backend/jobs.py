@@ -248,7 +248,17 @@ def rehydrate_jobs() -> None:
         job.words_path = wj
         job.ass_path = d / "captions.ass"
         job.output_path = out
-        probe_target = video if video else (out if out.exists() else None)
+        # A server restart can happen while FFmpeg is still writing output.mp4.
+        # Such a partial MP4 has no moov atom and must not be presented as a
+        # finished export when the job is rehydrated.
+        finished_output = False
+        if out.exists():
+            try:
+                probe_video(out)
+                finished_output = True
+            except Exception:
+                finished_output = False
+        probe_target = video if video else (out if finished_output else None)
         if probe_target is not None:
             try:
                 info = probe_video(probe_target)
@@ -258,7 +268,7 @@ def rehydrate_jobs() -> None:
                 job.duration = info["duration"]
             except Exception:
                 pass
-        if job.output_path.exists():
+        if finished_output:
             job.stage = Stage.DONE
             job.progress = 1.0
             job.message = "Pronto"

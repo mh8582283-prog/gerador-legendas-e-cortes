@@ -122,7 +122,7 @@ def _build_vstack_cmd(
     extras: ComposeExtras | None,
     headline_png: Path | None = None,
 ) -> list[str]:
-    cmd: list[str] = [ffmpeg_bin(), "-y", "-i", str(video)]
+    cmd: list[str] = [ffmpeg_bin(), "-y", "-progress", "pipe:2", "-nostats", "-i", str(video)]
     next_idx = 1
     logo_input_idx: int | None = None
     headline_input_idx: int | None = None
@@ -227,7 +227,7 @@ def _build_header_hstack_cmd(
     extras: ComposeExtras | None,
     header_png: Path,
 ) -> list[str]:
-    cmd: list[str] = [ffmpeg_bin(), "-y", "-i", str(video)]
+    cmd: list[str] = [ffmpeg_bin(), "-y", "-progress", "pipe:2", "-nostats", "-i", str(video)]
     cmd += ["-loop", "1", "-t", f"{duration:.3f}", "-i", str(side_image)]
     cmd += ["-loop", "1", "-t", f"{duration:.3f}", "-i", str(header_png)]
     logo_input_idx: int | None = None
