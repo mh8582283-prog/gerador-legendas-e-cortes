@@ -46,7 +46,19 @@ def _build_video_chain(
     current = in_label
     parts: list[str] = []
 
-    # ass burn
+    # Blur only the source video during the dramatic phrase.  It must run
+    # before ASS is burned in, otherwise the subtitle/hero phrase itself is
+    # blurred as well.  The simple (no-template) renderer used to ignore
+    # highlight_phrases entirely, so this effect worked only with templates.
+    blur_expr = fx.blur_enable_expr(highlight_phrases) if highlight_phrases else ""
+    if blur_expr:
+        parts.append(
+            f"[{current}]gblur=sigma=28:enable='{blur_expr}',"
+            f"eq=brightness=-0.14:saturation=0.75:enable='{blur_expr}'[vblur]"
+        )
+        current = "vblur"
+
+    # Burn the regular captions and the dramatic phrase after the blur.
     parts.append(f"[{current}]{_ass_filter(ass_path)}[vass]")
     current = "vass"
 
@@ -80,7 +92,10 @@ def _build_cmd(
     highlight_phrases: list[dict] | None = None,
     extras: 'ComposeExtras' | None = None,
 ) -> list[str]:
-    use_complex = bool(extras and extras.progress_enabled)
+    # Highlight blur needs filter_complex even without a template or progress
+    # bar. The previous condition meant the effect was silently skipped for
+    # the standard subtitle export.
+    use_complex = bool((extras and extras.progress_enabled) or highlight_phrases)
 
     # Emit newline-delimited progress so the interface can update during long
     # renders instead of waiting for FFmpeg's final carriage-return status.
