@@ -6,6 +6,14 @@ from render import _build_cmd
 
 
 class RenderCommandTests(unittest.TestCase):
+
+    def test_progress_bar_is_fast_then_finishes_with_video(self) -> None:
+        from overlays import fake_progress
+
+        duration = 100.0
+        # 300% for 70 seconds plus 30% for 30 seconds gives 2.19 units.
+        self.assertAlmostEqual(fake_progress(70.0, duration), 2.10 / 2.19, places=4)
+        self.assertAlmostEqual(fake_progress(100.0, duration), 1.0, places=4)
     def test_highlight_uses_blur_in_standard_export(self) -> None:
         cmd = _build_cmd(
             Path("input.mp4"), Path("captions.ass"), Path("output.mp4"),

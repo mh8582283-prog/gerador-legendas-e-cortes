@@ -64,10 +64,10 @@ class ComposeExtras:
     progress_enabled: bool = False
     progress_color: str = "#E31B23"
     progress_height_pct: float = 0.04
-    # Create the "almost finished" feeling: at half of the video the bar is
-    # already 80% full, then it advances slowly through its final 20%.
-    progress_fast_until: float = 0.50
-    progress_fill_at_fast: float = 0.80
+    # 300% speed through the first 70% of the video, then 30% speed through
+    # the final 30%. The normalized curve still reaches 100% exactly at end.
+    progress_fast_until: float = 0.70
+    progress_fill_at_fast: float = 2.10 / 2.19
 
     @classmethod
     def from_dict(cls, d: dict | None, job_dir: Path | None = None) -> ComposeExtras:
@@ -110,8 +110,8 @@ class ComposeExtras:
             progress_enabled=bool(d.get("progress_enabled", False)),
             progress_color=str(d.get("progress_color") or "#E31B23"),
             progress_height_pct=float(d.get("progress_height_pct", 0.04)),
-            progress_fast_until=float(d.get("progress_fast_until", 0.50)),
-            progress_fill_at_fast=float(d.get("progress_fill_at_fast", 0.80)),
+            progress_fast_until=float(d.get("progress_fast_until", 0.70)),
+            progress_fill_at_fast=float(d.get("progress_fill_at_fast", 2.10 / 2.19)),
         )
 
 
@@ -352,7 +352,13 @@ def render_headline_png(
     return out_path
 
 
-def fake_progress(t: float, duration: float, *, fast_until: float = 0.35, fill_at: float = 0.70) -> float:
+def fake_progress(
+    t: float,
+    duration: float,
+    *,
+    fast_until: float = 0.70,
+    fill_at: float = 2.10 / 2.19,
+) -> float:
     """Return bar fill 0..1 for real time t (shared with frontend preview)."""
     if duration <= 0:
         return 0.0
@@ -372,8 +378,8 @@ def fake_progress(t: float, duration: float, *, fast_until: float = 0.35, fill_a
 def fake_progress_expr(
     duration: float,
     *,
-    fast_until: float = 0.35,
-    fill_at: float = 0.70,
+    fast_until: float = 0.70,
+    fill_at: float = 2.10 / 2.19,
 ) -> str:
     """FFmpeg expression for progress fraction 0..1 (use with scale/overlay; drawbox has no time t)."""
     d = max(0.001, duration)
