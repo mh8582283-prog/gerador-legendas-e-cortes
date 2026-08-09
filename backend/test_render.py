@@ -11,8 +11,10 @@ class RenderCommandTests(unittest.TestCase):
         from overlays import fake_progress
 
         duration = 100.0
-        # 300% for 70 seconds plus 30% for 30 seconds gives 2.19 units.
-        self.assertAlmostEqual(fake_progress(70.0, duration), 2.10 / 2.19, places=4)
+        # 7x through 30%, 4x through 50%, then taper to 0.3x at the end.
+        self.assertAlmostEqual(fake_progress(30.0, duration), 2.10 / 3.26, places=4)
+        self.assertAlmostEqual(fake_progress(50.0, duration), 2.90 / 3.26, places=4)
+        self.assertAlmostEqual(fake_progress(80.0, duration), 3.20 / 3.26, places=4)
         self.assertAlmostEqual(fake_progress(100.0, duration), 1.0, places=4)
     def test_highlight_uses_blur_in_standard_export(self) -> None:
         cmd = _build_cmd(

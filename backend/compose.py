@@ -62,11 +62,7 @@ def _progress_overlay_chain(
     """Animated progress bar via color+overlay (much faster than scale=eval=frame)."""
     if not extras.progress_enabled:
         return None
-    prog = fake_progress_expr(
-        duration,
-        fast_until=extras.progress_fast_until,
-        fill_at=extras.progress_fill_at_fast,
-    )
+    prog = fake_progress_expr(duration)
     h_pct = clamp_progress_height_pct(extras.progress_height_pct)
     color = extras.progress_color.lstrip("#")
     bar_h = max(1, round(canvas_h * h_pct))

@@ -64,10 +64,6 @@ class ComposeExtras:
     progress_enabled: bool = False
     progress_color: str = "#E31B23"
     progress_height_pct: float = 0.04
-    # 300% speed through the first 70% of the video, then 30% speed through
-    # the final 30%. The normalized curve still reaches 100% exactly at end.
-    progress_fast_until: float = 0.70
-    progress_fill_at_fast: float = 2.10 / 2.19
 
     @classmethod
     def from_dict(cls, d: dict | None, job_dir: Path | None = None) -> ComposeExtras:
@@ -110,8 +106,6 @@ class ComposeExtras:
             progress_enabled=bool(d.get("progress_enabled", False)),
             progress_color=str(d.get("progress_color") or "#E31B23"),
             progress_height_pct=float(d.get("progress_height_pct", 0.04)),
-            progress_fast_until=float(d.get("progress_fast_until", 0.70)),
-            progress_fill_at_fast=float(d.get("progress_fill_at_fast", 2.10 / 2.19)),
         )
 
 
@@ -352,44 +346,42 @@ def render_headline_png(
     return out_path
 
 
-def fake_progress(
-    t: float,
-    duration: float,
-    *,
-    fast_until: float = 0.70,
-    fill_at: float = 2.10 / 2.19,
-) -> float:
-    """Return bar fill 0..1 for real time t (shared with frontend preview)."""
+def fake_progress(t: float, duration: float) -> float:
+    """Return front-loaded bar fill 0..1, ending exactly with the video."""
     if duration <= 0:
         return 0.0
     if t >= duration:
         return 1.0
     ratio = max(0.0, t / duration)
-    if ratio <= fast_until:
-        val = min(fill_at, ratio / fast_until * fill_at) if fast_until > 0 else fill_at
-    else:
-        rem = 1.0 - fast_until
-        if rem <= 0:
-            return 1.0
-        val = fill_at + (1.0 - fill_at) * ((ratio - fast_until) / rem)
-    return min(1.0, val)
+    # Perceived velocity: 7x for the first 30%, then 4x until 50%, 1x until
+    # 80%, and 0.3x to the end. Normalize the segments so the last pixel
+    # reaches the edge exactly as the video ends.
+    total = 7.0 * 0.30 + 4.0 * 0.20 + 1.0 * 0.30 + 0.3 * 0.20
+    first = 7.0 * 0.30 / total
+    second = (7.0 * 0.30 + 4.0 * 0.20) / total
+    third = (7.0 * 0.30 + 4.0 * 0.20 + 1.0 * 0.30) / total
+    if ratio <= 0.30:
+        return min(1.0, ratio / 0.30 * first)
+    if ratio <= 0.50:
+        return min(1.0, first + (ratio - 0.30) / 0.20 * (second - first))
+    if ratio <= 0.80:
+        return min(1.0, second + (ratio - 0.50) / 0.30 * (third - second))
+    return min(1.0, third + (ratio - 0.80) / 0.20 * (1.0 - third))
 
 
-def fake_progress_expr(
-    duration: float,
-    *,
-    fast_until: float = 0.70,
-    fill_at: float = 2.10 / 2.19,
-) -> str:
+def fake_progress_expr(duration: float) -> str:
     """FFmpeg expression for progress fraction 0..1 (use with scale/overlay; drawbox has no time t)."""
     d = max(0.001, duration)
-    fu = max(0.01, min(0.99, fast_until))
-    fa = max(0.01, min(0.99, fill_at))
-    rem = 1.0 - fu
+    total = 7.0 * 0.30 + 4.0 * 0.20 + 1.0 * 0.30 + 0.3 * 0.20
+    first = 7.0 * 0.30 / total
+    second = (7.0 * 0.30 + 4.0 * 0.20) / total
+    third = (7.0 * 0.30 + 4.0 * 0.20 + 1.0 * 0.30) / total
+    t1, t2, t3 = (d * 0.30, d * 0.50, d * 0.80)
     inner = (
-        f"if(lt(t,{fu * d:.3f}),"
-        f"min({fa:.4f},t/({fu * d:.3f})*{fa:.4f}),"
-        f"{fa:.4f}+(1-{fa:.4f})*((t-{fu * d:.3f})/({rem * d:.3f})))"
+        f"if(lt(t,{t1:.3f}),t/({t1:.3f})*{first:.6f},"
+        f"if(lt(t,{t2:.3f}),{first:.6f}+(t-{t1:.3f})/({t2 - t1:.3f})*{second - first:.6f},"
+        f"if(lt(t,{t3:.3f}),{second:.6f}+(t-{t2:.3f})/({t3 - t2:.3f})*{third - second:.6f},"
+        f"{third:.6f}+(t-{t3:.3f})/({d - t3:.3f})*{1.0 - third:.6f})))"
     )
     return f"min(1,{inner})"
 
