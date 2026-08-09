@@ -15,10 +15,9 @@ from app_settings import get_enrich_model
 
 load_dotenv()
 # Emoji selection benefits from small local contexts. Punctuation does not:
-# the old 70-word batches made a 30-minute transcript require almost 90
-# sequential OpenAI calls, so the button often looked as though it had failed.
+# use substantially larger batches so even long videos are ready promptly.
 CHUNK_SIZE = 70
-PUNCTUATION_CHUNK_SIZE = 240
+PUNCTUATION_CHUNK_SIZE = 500
 
 _EMOJI_RE = re.compile(
     r"^(\s*(?:[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E0-\U0001F1FF]"
@@ -224,7 +223,7 @@ def _call_gpt_punctuation(words: list[dict], language: str) -> dict[int, str]:
         plain = " ".join(t for t in tokens if t)
         if not plain.strip():
             continue
-        data = _openai_json(system, plain, max_tokens=900)
+        data = _openai_json(system, plain, max_tokens=1600)
         text = (data.get("text") or data.get("transcript") or "").strip()
         if not text:
             continue

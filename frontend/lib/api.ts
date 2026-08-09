@@ -1,3 +1,5 @@
+import { isMultiTenant } from "@/lib/hosted";
+
 export type Word = { w: string; start: number; end: number };
 
 export type SalesClient = {
@@ -362,13 +364,27 @@ async function authHeaders(): Promise<Record<string, string>> {
   }
 }
 
+/**
+ * In the local app the API is a separate service. Calling it directly keeps
+ * long-running actions (AI punctuation, renders and uploads) away from the
+ * Next.js rewrite proxy, which can close an otherwise healthy connection.
+ */
+function apiUrl(path: string): string {
+  if (typeof window !== "undefined" && !isMultiTenant()) {
+    const base = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+    return `${base}${path}`;
+  }
+  return path;
+}
+
 async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const auth = await authHeaders();
   const headers = new Headers(init?.headers);
   for (const [k, v] of Object.entries(auth)) {
     headers.set(k, v);
   }
-  const res = await fetch(input, { ...init, headers });
+  const target = typeof input === "string" ? apiUrl(input) : input;
+  const res = await fetch(target, { ...init, headers });
   if (typeof window !== "undefined") {
     if (res.status === 402) {
       const payload = await res.clone().json().catch(() => null);
@@ -383,7 +399,6 @@ async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
     } else if (res.status === 403) {
       const payload = await res.clone().json().catch(() => null);
       const code = payload?.detail?.code;
-      const { isMultiTenant } = await import("@/lib/hosted");
       if (isMultiTenant() && code === "openai_key_missing") {
         window.location.href = "/configuracoes";
       }
@@ -427,7 +442,6 @@ export async function uploadVideo(
   onProgress?: (pct: number) => void,
 ): Promise<JobState> {
   const { getAccessToken } = await import("@/lib/supabase/client");
-  const { isMultiTenant } = await import("@/lib/hosted");
   const hosted = isMultiTenant();
   const token = hosted ? await getAccessToken(true) : null;
   if (hosted && !token) {
@@ -485,7 +499,7 @@ export async function uploadVideo(
       reject(new Error("Upload cancelado."));
     });
 
-    xhr.open("POST", "/api/jobs");
+    xhr.open("POST", apiUrl("/api/jobs"));
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.send(form);
   });
@@ -532,7 +546,7 @@ export async function startRender(jobId: string, body: RenderRequest): Promise<{
 }
 
 export function videoUrl(jobId: string, accessToken?: string | null): string {
-  const base = `/api/jobs/${jobId}/video`;
+  const base = apiUrl(`/api/jobs/${jobId}/video`);
   if (accessToken) {
     return `${base}?access_token=${encodeURIComponent(accessToken)}`;
   }
@@ -540,7 +554,7 @@ export function videoUrl(jobId: string, accessToken?: string | null): string {
 }
 
 export function outputUrl(jobId: string, accessToken?: string | null): string {
-  const base = `/api/jobs/${jobId}/output.mp4`;
+  const base = apiUrl(`/api/jobs/${jobId}/output.mp4`);
   if (accessToken) {
     return `${base}?access_token=${encodeURIComponent(accessToken)}`;
   }
@@ -550,7 +564,7 @@ export function outputUrl(jobId: string, accessToken?: string | null): string {
 export function eventsUrl(jobId: string, accessToken?: string | null): string {
   const base =
     typeof window !== "undefined"
-      ? `/api/jobs/${jobId}/events`
+      ? apiUrl(`/api/jobs/${jobId}/events`)
       : `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"}/api/jobs/${jobId}/events`;
   if (accessToken) {
     return `${base}?access_token=${encodeURIComponent(accessToken)}`;

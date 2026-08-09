@@ -283,6 +283,12 @@ export default function VideoPreview({
   const defaultCompactMax = "calc(70dvh - 4rem)";
   const effectiveMaxHeight = compactMaxHeight ?? (compact ? defaultCompactMax : "100%");
   const effectiveMaxWidth = (!isPortrait && compact) ? "400px" : "100%";
+  // A portrait frame needs a real height. Using `height: 100%` here depended
+  // on an ancestor with no fixed height, so the video could play with a zero
+  // sized black preview.
+  const portraitHeight = compact
+    ? effectiveMaxHeight
+    : "min(80dvh, 900px)";
 
   return (
     <div className={`flex w-full flex-col gap-2 ${compact ? "h-full max-h-full items-center" : ""}`}>
@@ -293,20 +299,10 @@ export default function VideoPreview({
           aspectRatio: `${width} / ${height}`,
           maxHeight: effectiveMaxHeight,
           maxWidth: effectiveMaxWidth,
-          height: isPortrait ? "100%" : "auto",
+          height: isPortrait ? portraitHeight : "auto",
           width: isPortrait ? "auto" : "100%",
         }}
       >
-        {/* Invisible SVG element to force correct aspect-ratio scaling bounds */}
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="pointer-events-none invisible block"
-          style={{
-            width: isPortrait ? "auto" : "100%",
-            height: isPortrait ? "100%" : "auto",
-          }}
-          aria-hidden="true"
-        />
         {mainVideoSrc ? (
           <video
             key={mainVideoSrc}

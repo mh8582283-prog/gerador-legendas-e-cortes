@@ -1066,13 +1066,30 @@ async def _run_transcribe(job: Job) -> None:
 
             from timing import trim_word_ends
 
-            def trim_only() -> None:
+            def punctuate_and_trim() -> None:
                 data = json.loads(job.words_path.read_text(encoding="utf-8"))
-                data["words"] = trim_word_ends(data.get("words", []))
+                words = data.get("words", [])
+                if words:
+                    # Release the transcript to the editor only after its
+                    # punctuation pass. This avoids a long browser request
+                    # for large videos and makes punctuation the default.
+                    job.update(Stage.TRANSCRIBING, 1.0, "Ajustando pontuação da transcrição...")
+                    lang_for_enrich = job.language if job.language and job.language != "auto" else "auto"
+                    try:
+                        result = enrich.enrich_words(
+                            words, job.job_dir(), lang_for_enrich,
+                            punctuation=True, emojis=False,
+                        )
+                        words = result["words"]
+                    except Exception as exc:
+                        # Keep the transcription usable if the optional AI
+                        # pass is temporarily unavailable.
+                        log.warning("automatic punctuation failed for %s: %s", job.id, exc)
+                data["words"] = trim_word_ends(words)
                 job.words_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
-            await asyncio.to_thread(trim_only)
-            job.update(Stage.TRANSCRIBED, 1.0, "Transcrição concluída")
+            await asyncio.to_thread(punctuate_and_trim)
+            job.update(Stage.TRANSCRIBED, 1.0, "Transcrição concluída com pontuação")
         except Exception as e:
             job.update(Stage.ERROR, 0.0, f"transcribe falhou: {e}")
 
