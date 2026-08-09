@@ -7,6 +7,11 @@ from render import _build_cmd
 
 class RenderCommandTests(unittest.TestCase):
 
+    def test_rerender_request_can_reuse_existing_captions(self) -> None:
+        from main import RenderRequest
+
+        self.assertTrue(RenderRequest(reuse_ass=True).reuse_ass)
+
     def test_progress_bar_is_fast_then_finishes_with_video(self) -> None:
         from overlays import fake_progress
 

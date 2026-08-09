@@ -301,6 +301,9 @@ class RenderRequest(BaseModel):
     ig_avatar_size: int = 72
     ig_username_size: int = 34
     ig_caption_size: int = 28
+    # Used for a safe re-render of a finished video when only composition
+    # overlays (such as the progress bar) need to change.
+    reuse_ass: bool = False
 
 
 class KeywordsUpdate(BaseModel):
@@ -1206,14 +1209,18 @@ async def _run_render(job: Job, body: RenderRequest) -> None:
 
             pause_s = getattr(cfg, "pause_threshold_s", 0.45) or 0.45
 
-            await asyncio.to_thread(
-                generate_ass, data, cfg, body.words_per_line, job.ass_path,
-                kw_indices,
-                body.highlight_enabled,
-                highlight_phrases if body.highlight_enabled else None,
-                pause_s,
-            )
-            job.update(Stage.GENERATING_ASS, 1.0, "ASS pronto")
+            reuse_ass = body.reuse_ass and job.ass_path and job.ass_path.exists()
+            if reuse_ass:
+                job.update(Stage.GENERATING_ASS, 1.0, "Reaproveitando legendas prontas")
+            else:
+                await asyncio.to_thread(
+                    generate_ass, data, cfg, body.words_per_line, job.ass_path,
+                    kw_indices,
+                    body.highlight_enabled,
+                    highlight_phrases if body.highlight_enabled else None,
+                    pause_s,
+                )
+                job.update(Stage.GENERATING_ASS, 1.0, "ASS pronto")
 
             def on_progress(p: float, msg: str) -> None:
                 job.update(Stage.RENDERING, p, msg)
